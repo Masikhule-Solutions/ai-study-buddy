@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Study Buddy - Data Flow Diagram</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 2rem 3rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        h1, h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 0.5rem;
+            margin-top: 2rem;
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+        }
+        h2 {
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+        }
+        .mermaid {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background-color: #fdfdfd;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            text-align: center;
+        }
+        ul {
+            padding-left: 20px;
+            margin-bottom: 2rem;
+        }
+        li {
+            margin-bottom: 0.75rem;
+        }
+        code {
+            background-color: #e8e8e8;
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            font-size: 0.9em;
+        }
+        .instructions {
+            background-color: #e6f7ff;
+            border: 1px solid #91d5ff;
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 2rem;
+        }
+        @media print {
+            body {
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+                border-radius: 0;
+                padding: 1rem;
+            }
+            .instructions {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI Study Buddy: Visual Data Flow</h1>
+
+        <div class="instructions">
+            <p><strong>How to create your PDF:</strong></p>
+            <ol>
+                <li>Press <strong>Ctrl+P</strong> (or <strong>Cmd+P</strong> on Mac) to open the print dialog.</li>
+                <li>Change the "Destination" to <strong>"Save as PDF"</strong>.</li>
+                <li>Click <strong>"Save"</strong>.</li>
+            </ol>
+        </div>
+
+        <h2>1. AI Chat & RAG Data Flow</h2>
+        <div class="mermaid">
+            graph TD
+                A[User types message or uploads document] --> B{ChatInterface Component};
+                B --> C[Update React State: messages & studyContext];
+                C --> D[Call geminiService.getChatResponseStream];
+                D --> E[Construct Prompt with RAG Context];
+                E --> F[API Call to Google Gemini];
+                F -- Stream Chunks --> D;
+                D -- Yield Chunks --> B;
+                B --> G[Live-update UI with streaming text];
+                C --> H[Save updated chat to LocalStorage];
+        </div>
+        <h3>Explanation:</h3>
+        <ul>
+            <li><strong>1. User Input:</strong> The user interacts with the `ChatInterface`, either by typing a message or uploading a `.txt`/`.pdf` file to provide context for Retrieval-Augmented Generation (RAG).</li>
+            <li><strong>2. State Update:</strong> The React component immediately updates its local state. The new message is added to the conversation history, and the content of any uploaded file is parsed and stored in the `studyContext` state.</li>
+            <li><strong>3. Service Call:</strong> The component calls the `getChatResponseStream` function located in `geminiService.ts`, passing the complete chat history and the `studyContext`.</li>
+            <li><strong>4. API Request:</strong> The service constructs a request for the Google Gemini API. If RAG context is present, a specialized system prompt is included that instructs the model to prioritize answers from the user's document.</li>
+            <li><strong>5. Streaming Response:</strong> The Gemini API processes the request and streams the response back chunk by chunk, which is consumed by the service function.</li>
+            <li><strong>6. Live UI Update:</strong> As each text chunk arrives, it is yielded to the `ChatInterface` component, which updates its state. This results in the AI's response appearing on the screen in real-time.</li>
+            <li><strong>7. Persistence:</strong> A `useEffect` hook saves the entire updated conversation history to the browser's `LocalStorage`, ensuring the chat is preserved across sessions.</li>
+        </ul>
+
+        <h2>2. Structured Data Generation (Quiz / Planner)</h2>
+        <div class="mermaid">
+            graph TD
+                A[User enters topic and clicks "Generate"] --> B{UI Component (e.g., QuizGenerator)};
+                B --> C[Set isLoading state to true];
+                C --> D[Call geminiService function (e.g., generateQuiz)];
+                D --> E[API Call to Gemini with JSON Schema];
+                E -- Returns Validated JSON --> D;
+                D -- Returns Parsed Object --> B;
+                B --> F[Set isLoading to false, update state with data];
+                F --> G[Render Quiz/Plan to user];
+        </div>
+        <h3>Explanation:</h3>
+        <ul>
+            <li><strong>1. User Input:</strong> The user provides a topic for a quiz or a goal for a study plan in the corresponding UI component.</li>
+            <li><strong>2. Loading State:</strong> The component sets its `isLoading` state to `true`, which triggers the display of a loading indicator, providing immediate feedback to the user.</li>
+            <li><strong>3. Service Call:</strong> The appropriate function in `geminiService.ts` is called (e.g., `generateQuiz`).</li>
+            <li><strong>4. Structured API Request:</strong> The service makes a request to the Google Gemini API. Crucially, this request includes `responseMimeType: "application/json"` and a `responseSchema` that defines the exact structure of the expected JSON output.</li>
+            <li><strong>5. JSON Response:</strong> The Gemini model generates content that strictly adheres to the provided schema and returns it as a JSON string.</li>
+            <li><strong>6. Parsing & State Update:</strong> The service parses the JSON string into a JavaScript object. The UI component receives this object, updates its state with the new data, and sets `isLoading` to `false`.</li>
+            <li><strong>7. UI Render:</strong> React re-renders the component, displaying the fully interactive quiz or the structured study plan to the user.</li>
+        </ul>
+
+        <h2>3. Client-Side Gamification & Tracking</h2>
+        <div class="mermaid">
+            graph TD
+                A[User completes an action <br/> e.g., finishes quiz] --> B{UI Component};
+                B --> C[Call tracking utility function <br/> e.g., logQuizCompletion];
+                C --> D[Read current stats from LocalStorage];
+                D --> E[Update stats object & check streak];
+                E --> F[Write updated stats to LocalStorage];
+                G[Dashboard Component] -- On Load --> H[Read stats from LocalStorage];
+                H --> I[Render stats, streak, and badges];
+        </div>
+        <h3>Explanation:</h3>
+        <ul>
+            <li><strong>1. User Action:</strong> A user performs a trackable action, such as submitting a quiz, reviewing a flashcard, or checking off a task in the study planner.</li>
+            <li><strong>2. Utility Call:</strong> The relevant UI component calls a function from `utils/tracking.ts` (e.g., `logQuizCompletion`).</li>
+            <li><strong>3. Read:</strong> The tracking utility reads the current `DashboardStats` object from `LocalStorage`.</li>
+            <li><strong>4. Update:</strong> The utility updates the statistics in the object (e.g., increments `quizzesCompleted`). It also checks the `lastActivityDate` to determine if the daily study streak should be updated.</li>
+            <li><strong>5. Write:</strong> The updated `DashboardStats` object is immediately written back to `LocalStorage`, persisting the user's progress.</li>
+            <li><strong>6. Dashboard Load:</strong> When the `Dashboard` component loads (or when the user navigates to it), it reads the latest stats directly from `LocalStorage` to ensure the most up-to-date information is always displayed.</li>
+        </ul>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({ startOnLoad: true });
+    </script>
+</body>
+</html>

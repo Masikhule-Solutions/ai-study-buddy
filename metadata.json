@@ -1,0 +1,7 @@
+{
+  "name": "AI Study Buddy",
+  "description": "AI Study Buddy is a comprehensive, AI-powered learning assistant designed to revolutionize how students approach their studies. Built as a serverless, client-side web application using React and Google's Gemini API, it offers a suite of intelligent tools that go beyond simple Q&A.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
